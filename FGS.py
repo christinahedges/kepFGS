@@ -40,7 +40,8 @@ def get_data(datadir='',mission='kepler',quarters=None):
     Obtain the FGS data for Kepler or K2 directly from MAST
     mission = kepler,k2
     '''
-    
+    if type(quarters)==int:
+        quarters=[quarters]
     #Find the data for the right mission
     if mission=='kepler':
         prefix='kplr'
@@ -75,7 +76,46 @@ def get_data(datadir='',mission='kepler',quarters=None):
             os.remove(datadir+fname+'.tar.gz')
 
 
-def fgs_lc(datadir,quarter,module,starno,norm=True,mission='kepler',raw=False,npoly=1,nsig=5.):
+def table(datadir='',return_loc=False):
+    if glob.glob(datadir+'kplr-anc-2017013163000.txt')==[]:
+        url='https://archive.stsci.edu/missions/kepler/fgs/flc/kplr-anc-2017013163000.txt'
+        fileName=datadir+prefix+'-anc-2017013163000.txt'
+        download(url,fileName,progress=False)
+        if glob.glob(datadir+'kplr-anc-2017013163000.txt')==[]:
+            print 'No Kepler ancilliary data.'
+            return None
+
+    if glob.glob(datadir+'ktwo-anc-2017013163000.txt')==[]:
+        url='https://archive.stsci.edu/missions/k2/fgs/flc/ktwo-anc-2017013163000.txt'
+        fileName=datadir+prefix+'-anc-2017013163000.txt'
+        download(url,fileName,progress=False)
+        if glob.glob(datadir+'ktwo-anc-2017013163000.txt')==[]:
+            print 'No K2 ancilliary data.'
+            return None
+        
+    keys=['KEPLER_ID','RA','DEC','KEPMAG','mission','QUARTER','FGS_MODULE','STAR_INDEX']
+    k2=pd.read_csv('ktwo-anc-2017013163000.txt',skiprows=[0,1,3])
+#    k2=k2.loc[np.unique(k2['RA'],return_index=True)[1]].reset_index(drop=True)
+    k2.columns=np.append('QUARTER',k2.keys()[1:])
+    k2['mission']='k2'
+    k2=k2[keys]
+
+    kepler=pd.read_csv('kplr-anc-2017013163000.txt',skiprows=[0,1,3])
+#    kepler=kepler.loc[np.unique(k2['RA'],return_index=True)[1]].reset_index(drop=True)
+    kepler['mission']='kepler'
+    kepler.columns=np.append('QUARTER',kepler.keys()[1:])
+    kepler=kepler[keys]
+    tab=k2.append(kepler).reset_index(drop=True)
+    tab=tab[tab.KEPLER_ID!=-1].reset_index(drop=True)
+    if return_loc==False:
+        tab=tab.loc[np.unique(tab.RA,return_index=True)[1]].reset_index(drop=True)
+        tab=tab.sort_values('mission')
+        tab=tab[keys[0:-3]]
+
+    return tab
+
+
+def fgs_lc(datadir,quarter,module,starno,norm=True,raw=False,npoly=1,nsig=5.,mission='kepler'):
 
     '''
     Reads, cleans and returns an FGS light curve based on quarter, module, star number
@@ -85,6 +125,12 @@ def fgs_lc(datadir,quarter,module,starno,norm=True,mission='kepler',raw=False,np
     raw = returns raw data with no cleaning
     norm = normalise data
     '''
+    if type(quarter)==int:
+        quarter=str(quarter).zfill(2)
+
+    if type(module)==int:
+        module=str(module).zfill(2)
+
 
     if mission=='kepler':
         prefix='kplr'
@@ -93,11 +139,14 @@ def fgs_lc(datadir,quarter,module,starno,norm=True,mission='kepler',raw=False,np
         prefix='ktwo'
         pref='c'
         
-        
     mods=np.asarray(['01','05','21','25'],dtype=str)
     fnames=glob.glob(datadir+prefix+'-flc-'+pref+quarter+'-xx.txt/*')
     if fnames==[]:
-        FGS.get_data(datadir,mission=mission,quarters=[np.int(quarter)])
+        try:
+            get_data(datadir,mission=mission,quarters=[np.int(quarter)])
+        except:
+            print 'Cannot download data'
+            return [],[],[],[]
         fnames=glob.glob(datadir+prefix+'-flc-'+pref+quarter+'-xx.txt/*')
         if fnames==[]:
             print 'No data'
@@ -156,12 +205,21 @@ def fgs_lc(datadir,quarter,module,starno,norm=True,mission='kepler',raw=False,np
 
 
 
-def gen_lc(datadir='',mission='kepler',ID=None,norm=True,quarters=None):
+def gen_lc(datadir='',ID=None,norm=True,quarters=None):
 
     '''
     Generate light curve for FGS data. Reads data from multiple modules and stitches it together.
 
     '''
+    tab=table(return_loc=True)
+    tab=tab.sort_values('QUARTER')   
+    loc=np.where(tab.KEPLER_ID==ID)[0]
+    if len(loc)==0:
+        print 'No such star'
+        return
+    if len(loc)>1:
+        loc=[loc[0]]
+    mission=np.asarray(tab.loc[loc,'mission'])[0]
 
     if mission=='kepler':
         prefix='kplr'
@@ -177,30 +235,33 @@ def gen_lc(datadir='',mission='kepler',ID=None,norm=True,quarters=None):
     if glob.glob(datadir+prefix+'-anc-2017013163000.txt')==[]:
         url='https://archive.stsci.edu/missions/'+mission+'/fgs/flc/'+prefix+'-anc-2017013163000.txt'
         fileName=datadir+prefix+'-anc-2017013163000.txt'
-        download(url,fileName,progress=False)
-    stars=pd.read_csv('../data/FGSLC/kplr-anc-2017013163000.txt',skiprows=[0,1,3])
+        try:
+            download(url,fileName,progress=False)
+        except:
+            print 'Cannot download data'
+            return
 
     if ID==None:
-        IDS=np.unique(np.asarray(stars.KEPLER_ID))
-    else:
-        IDS=[ID]
+        print 'Please provide an ID'
+        return [],[],[],[]
+
     x,y,cols,rows=np.zeros(0),np.zeros(0),np.zeros(0),np.zeros(0)
-    for ID in IDS:
-        s_stars=stars[stars.KEPLER_ID==ID].reset_index(drop=True)
-        s_qs=np.asarray(s_stars[s_stars.keys()[0]],dtype=int)
-        if quarters==None:
-            quarters=s_qs
-        for q in quarters:
-            quarter=str(q).zfill(2)
-            pos=np.where(s_qs==q)[0]
-            if len(pos)==0:
-                continue
-            pos=pos[0]
-            module=str(s_stars.loc[pos,s_stars.keys()[1]]).zfill(2)
-            starno=s_stars.loc[pos,s_stars.keys()[2]]-1
-            t,counts,col,row=fgs_lc(datadir,quarter,module,starno,norm=norm,mission=mission)
-            x=np.append(x,t,axis=0)
-            y=np.append(y,counts,axis=0)
-            cols=np.append(cols,col,axis=0)
-            rows=np.append(rows,row,axis=0)
+
+    s_tab=tab[tab.KEPLER_ID==ID].reset_index(drop=True)
+    s_qs=np.asarray(s_tab['QUARTER'],dtype=int)
+    if quarters==None:
+        quarters=s_qs
+    for q in quarters:
+        quarter=str(q).zfill(2)
+        pos=np.where(s_qs==q)[0]
+        if len(pos)==0:
+            continue
+        pos=pos[0]
+        module=str(s_tab.loc[pos,'FGS_MODULE']).zfill(2)
+        starno=s_tab.loc[pos,'STAR_INDEX']-1
+        t,counts,col,row=fgs_lc(datadir,quarter,module,starno,norm=norm,mission=mission)
+        x=np.append(x,t,axis=0)
+        y=np.append(y,counts,axis=0)
+        cols=np.append(cols,col,axis=0)
+        rows=np.append(rows,row,axis=0)
     return x,y,cols,rows
