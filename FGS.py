@@ -49,8 +49,8 @@ def get_data(datadir='',mission='kepler',quarters=None):
     if mission=='k2':
         prefix='ktwo'
         pref='c'
-    if (mission!='kepler')&(mission!='k2'):
-        print "Choose 'kepler' or 'k2' for mission."
+    if (mission!='kepler') and (mission!='k2'):
+        print("Choose 'kepler' or 'k2' for mission.")
         return
     
     #Get ancilliary table
@@ -66,7 +66,7 @@ def get_data(datadir='',mission='kepler',quarters=None):
     for q in quarters:
         fname=''+prefix+'-flc-'+pref+str(q).zfill(2)+'-xx.txt'
         if glob.glob(datadir+fname)==[]:
-            print 'Downloading Quarter '+str(q)
+            print('Downloading Quarter '+str(q))
             url='https://archive.stsci.edu/missions/'+mission+'/fgs/flc/'+fname+'.tar.gz'
             fileName=datadir+fname+'.tar.gz'
             download(url,fileName)
@@ -83,9 +83,9 @@ def table(datadir='',return_loc=False):
         try:
             download(url,fileName,progress=False)
         except:
-            print 'Cannot download data'
+            print('Cannot download data')
         if glob.glob(datadir+'kplr-anc-2017013163000.txt')==[]:
-            print 'No Kepler ancilliary data.'
+            print('No Kepler ancilliary data.')
             return None
 
     if glob.glob(datadir+'ktwo-anc-2017013163000.txt')==[]:
@@ -94,9 +94,9 @@ def table(datadir='',return_loc=False):
         try:
             download(url,fileName,progress=False)
         except:
-            print 'Cannot download data'
+            print('Cannot download data')
         if glob.glob(datadir+'ktwo-anc-2017013163000.txt')==[]:
-            print 'No K2 ancilliary data.'
+            print('No K2 ancilliary data.')
             return None
         
     keys=['KEPLER_ID','RA','DEC','KEPMAG','mission','QUARTER','FGS_MODULE','STAR_INDEX']
@@ -151,17 +151,17 @@ def fgs_lc(datadir,quarter,module,starno,div_trend=False,norm=True,raw=False,npo
         try:
             get_data(datadir,mission=mission,quarters=[np.int(quarter)])
         except:
-            print 'Cannot download data'
+            print('Cannot download data')
             return [],[],[],[]
         fnames=glob.glob(datadir+prefix+'-flc-'+pref+quarter+'-xx.txt/*')
         if fnames==[]:
-            print 'No data'
+            print('No data')
             return None,None,None,None
 
     f=fnames[np.where(mods==module)[0][0]]
     df=pd.read_csv(f,skiprows=[0,2])
     if (int(starno)*3)+3>len(df.keys()):
-        print 'No such star'
+        print('No such star')
         return None,None,None,None
 
 
@@ -224,7 +224,7 @@ def gen_lc(datadir='',ID=None,norm=True,div_trend=False,quarters=None,raw=False,
     tab=tab.sort_values('QUARTER')   
     loc=np.where(tab.KEPLER_ID==ID)[0]
     if len(loc)==0:
-        print 'No such star'
+        print('No such star')
         return
     if len(loc)>1:
         loc=[loc[0]]
@@ -235,7 +235,7 @@ def gen_lc(datadir='',ID=None,norm=True,div_trend=False,quarters=None,raw=False,
     if mission=='k2':
         prefix='ktwo'
     if (mission!='kepler')&(mission!='k2'):
-        print "Choose 'kepler' or 'k2' for mission."
+        print("Choose 'kepler' or 'k2' for mission.")
         return
 
     if type(quarters)==int:
@@ -247,11 +247,11 @@ def gen_lc(datadir='',ID=None,norm=True,div_trend=False,quarters=None,raw=False,
         try:
             download(url,fileName,progress=False)
         except:
-            print 'Cannot download data'
+            print('Cannot download data')
             return
 
     if ID==None:
-        print 'Please provide an ID'
+        print('Please provide an ID')
         return [],[],[],[]
 
     x,y,cols,rows=np.zeros(0),np.zeros(0),np.zeros(0),np.zeros(0)
