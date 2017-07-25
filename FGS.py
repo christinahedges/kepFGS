@@ -120,8 +120,8 @@ def table(datadir='', return_loc=False):
         tab = tab.loc[np.unique(tab.RA, return_index=True)[1]].reset_index(drop=True)
         tab = tab.sort_values('mission')
         tab = tab[keys[0:-3]]
-
-    return tab.reset_index(drop=True)
+    tab = tab.reset_index(drop=True)
+    return tab
 
 
 def fgs_lc(datadir, quarter, module, starno, div_trend=False, norm=True,
@@ -170,15 +170,15 @@ def fgs_lc(datadir, quarter, module, starno, div_trend=False, norm=True,
 
     #Clear out nans from the data
     #----------------------------
-    keys=df.keys()[[0,(int(starno)*3)+1,(int(starno)*3)+2,(int(starno)*3)+3]]
-    df=df[keys].dropna().reset_index(drop=True)
-    dates=[datetime.datetime.strptime(d,'%m/%d/%y %H:%M:%S.%f') for d in df[df.keys()[0]]]
-    t=Time(dates).jd
-    pref=df.keys()[1][0:5]
+    keys = df.keys()[[0, (int(starno) * 3) + 1, (int(starno) * 3) + 2, (int(starno) * 3) + 3]]
+    df = df[keys].dropna().reset_index(drop=True)
+    dates = [datetime.datetime.strptime(d, '%m/%d/%y %H:%M:%S.%f') for d in df[df.keys()[0]]]
+    t = Time(dates).jd
+    pref = df.keys()[1][0:5]
 
-    counts,col,row=np.asarray(df[keys[1]]),np.asarray(df[keys[2]]),np.asarray(df[keys[3]])
-    if raw==True:
-        return t,counts,col,row
+    counts, col, row = np.asarray(df[keys[1]]), np.asarray(df[keys[2]]), np.asarray(df[keys[3]])
+    if raw is True:
+        return t, counts, col, row
 
     #Get rid of bad pointings
     #------------------------
@@ -215,6 +215,7 @@ def gen_lc(datadir='', ID=None, norm=True, div_trend=False, quarters=None,
 
     tab = table(return_loc=True)
     tab = tab.sort_values('QUARTER')
+    tab = tab.reset_index(drop=True)
     loc = np.where(tab.KEPLER_ID == ID)[0]
     if len(loc) == 0:
         print('No such star')
