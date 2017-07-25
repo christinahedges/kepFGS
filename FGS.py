@@ -79,16 +79,22 @@ def get_data(datadir='',mission='kepler',quarters=None):
 def table(datadir='',return_loc=False):
     if glob.glob(datadir+'kplr-anc-2017013163000.txt')==[]:
         url='https://archive.stsci.edu/missions/kepler/fgs/flc/kplr-anc-2017013163000.txt'
-        fileName=datadir+prefix+'-anc-2017013163000.txt'
-        download(url,fileName,progress=False)
+        fileName=datadir+'kplr-anc-2017013163000.txt'
+        try:
+            download(url,fileName,progress=False)
+        except:
+            print 'Cannot download data'
         if glob.glob(datadir+'kplr-anc-2017013163000.txt')==[]:
             print 'No Kepler ancilliary data.'
             return None
 
     if glob.glob(datadir+'ktwo-anc-2017013163000.txt')==[]:
         url='https://archive.stsci.edu/missions/k2/fgs/flc/ktwo-anc-2017013163000.txt'
-        fileName=datadir+prefix+'-anc-2017013163000.txt'
-        download(url,fileName,progress=False)
+        fileName=datadir+'ktwo-anc-2017013163000.txt'
+        try:
+            download(url,fileName,progress=False)
+        except:
+            print 'Cannot download data'
         if glob.glob(datadir+'ktwo-anc-2017013163000.txt')==[]:
             print 'No K2 ancilliary data.'
             return None
@@ -112,10 +118,10 @@ def table(datadir='',return_loc=False):
         tab=tab.sort_values('mission')
         tab=tab[keys[0:-3]]
 
-    return tab
+    return tab.reset_index(drop=True)
 
 
-def fgs_lc(datadir,quarter,module,starno,norm=True,raw=False,npoly=1,nsig=5.,mission='kepler'):
+def fgs_lc(datadir,quarter,module,starno,div_trend=False,norm=True,raw=False,npoly=1,nsig=5.,mission='kepler'):
 
     '''
     Reads, cleans and returns an FGS light curve based on quarter, module, star number
@@ -197,15 +203,18 @@ def fgs_lc(datadir,quarter,module,starno,norm=True,raw=False,npoly=1,nsig=5.,mis
     good=good[np.where(np.abs(counts[good]-line)<=nsig*np.std(counts[good]-line))[0]]
      
     if norm==True:
+        counts/=np.nanmedian(counts[good])
+    if div_trend==True:
         l=np.polyfit(t[good],counts[good],npoly)
         line=np.polyval(l,t)
         counts/=line
         
+
     return t[good],counts[good],col[good],row[good]
 
 
 
-def gen_lc(datadir='',ID=None,norm=True,quarters=None):
+def gen_lc(datadir='',ID=None,norm=True,div_trend=False,quarters=None,raw=False,npoly=1,nsig=5):
 
     '''
     Generate light curve for FGS data. Reads data from multiple modules and stitches it together.
@@ -259,7 +268,7 @@ def gen_lc(datadir='',ID=None,norm=True,quarters=None):
         pos=pos[0]
         module=str(s_tab.loc[pos,'FGS_MODULE']).zfill(2)
         starno=s_tab.loc[pos,'STAR_INDEX']-1
-        t,counts,col,row=fgs_lc(datadir,quarter,module,starno,norm=norm,mission=mission)
+        t,counts,col,row=fgs_lc(datadir,quarter,module,starno,raw=raw,norm=norm,mission=mission,npoly=npoly,nsig=nsig)
         x=np.append(x,t,axis=0)
         y=np.append(y,counts,axis=0)
         cols=np.append(cols,col,axis=0)
