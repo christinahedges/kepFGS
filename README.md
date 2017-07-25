@@ -1,7 +1,7 @@
 kepFGS
 ======
 
-Tools and tutorials for using the Kepler and K2 FGS data. The FGS.py file included in this repo contains tools to download, clean and stitch FGS quarters and campaigns. 
+Tools and tutorials for using the Kepler and K2 FGS data. The FGS.py file included in this repo contains tools to download, clean and stitch FGS quarters and campaigns. Currently this is only compatible with python 2.7.
 
 Dependencies
 ------------
