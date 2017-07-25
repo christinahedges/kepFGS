@@ -40,6 +40,7 @@ def get_data(datadir='',mission='kepler',quarters=None):
     Obtain the FGS data for Kepler or K2 directly from MAST
     mission = kepler,k2
     '''
+
     if type(quarters)==int:
         quarters=[quarters]
     #Find the data for the right mission
@@ -117,8 +118,8 @@ def table(datadir='',return_loc=False):
         tab=tab.loc[np.unique(tab.RA,return_index=True)[1]].reset_index(drop=True)
         tab=tab.sort_values('mission')
         tab=tab[keys[0:-3]]
-
-    return tab.reset_index(drop=True)
+    tab=tab.reset_index(drop=True)
+    return tab
 
 
 def fgs_lc(datadir,quarter,module,starno,div_trend=False,norm=True,raw=False,npoly=1,nsig=5.,mission='kepler'):
@@ -222,12 +223,14 @@ def gen_lc(datadir='',ID=None,norm=True,div_trend=False,quarters=None,raw=False,
     '''
     tab=table(return_loc=True)
     tab=tab.sort_values('QUARTER')   
+    tab=tab.reset_index(drop=True)
     loc=np.where(tab.KEPLER_ID==ID)[0]
     if len(loc)==0:
         print('No such star')
         return
     if len(loc)>1:
         loc=[loc[0]]
+
     mission=np.asarray(tab.loc[loc,'mission'])[0]
 
     if mission=='kepler':
@@ -257,6 +260,7 @@ def gen_lc(datadir='',ID=None,norm=True,div_trend=False,quarters=None,raw=False,
     x,y,cols,rows=np.zeros(0),np.zeros(0),np.zeros(0),np.zeros(0)
 
     s_tab=tab[tab.KEPLER_ID==ID].reset_index(drop=True)
+
     s_qs=np.asarray(s_tab['QUARTER'],dtype=int)
     if quarters==None:
         quarters=s_qs
@@ -268,6 +272,7 @@ def gen_lc(datadir='',ID=None,norm=True,div_trend=False,quarters=None,raw=False,
         pos=pos[0]
         module=str(s_tab.loc[pos,'FGS_MODULE']).zfill(2)
         starno=s_tab.loc[pos,'STAR_INDEX']-1
+
         t,counts,col,row=fgs_lc(datadir,quarter,module,starno,raw=raw,norm=norm,mission=mission,npoly=npoly,nsig=nsig)
         x=np.append(x,t,axis=0)
         y=np.append(y,counts,axis=0)
